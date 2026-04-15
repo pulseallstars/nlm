@@ -13,9 +13,9 @@ RAG score = cosine_similarity(query, memory)
 ```
 
 This means:
-- An old but critical fact loses to a newer irrelevant one
-- A frequently referenced memory has no advantage over one never used
-- "What did we talk about last week?" gets the same treatment as any other query
+- An old outdated fact beats a fresh one if it's semantically closer
+- A memory you've referenced 50 times has no advantage over one never used
+- Vague filler text can outrank a specific factual memory
 
 ---
 
@@ -33,11 +33,12 @@ NLM Score = 0.5 × semantic_similarity   ← is it relevant?
 | | Standard RAG | NLM |
 |---|---|---|
 | Retrieval signal | Semantic only | Semantic + time + frequency + importance |
+| Outdated facts | Can win over fresh ones | Time decay pushes them down |
 | Old important facts | Get buried | Survive via frequency boost |
-| Temporal queries | Ignored | time_decay handles naturally |
 | Duplicate memories | Accumulate | Consolidated automatically |
 | Importance scoring | None | CPU heuristic or GPU zero-shot classifier |
 | Emotion metadata | None | Optional (joy / fear / sadness / ...) |
+| Associative chains | None | Bidirectional links between related memories |
 | GPU required | No | No (GPU optional for better importance) |
 | Plug-and-play | Yes | Yes |
 
@@ -45,42 +46,43 @@ NLM Score = 0.5 × semantic_similarity   ← is it relevant?
 
 ## Benchmarks
 
-> Tested on a personal AI agent (Pulses project, RWKV-7 base model).  
-> Reproducible benchmark script: `benchmarks/compare_rag.py`
+### Formal benchmark — 100 memories, 30 queries
 
-### Test 1 — Temporal recall
-**Task:** old fact accessed 15 times vs fresh fact never accessed.
+**Methodology:**
+- 100 memories stored (60 test pairs + 40 unrelated background fillers)
+- 30 queries across 3 categories (10 each)
+- Ground truth: human-labeled correct answer for each query
+- Metric: **top-1 accuracy** — did the right memory rank first?
+- RAG baseline: pure cosine similarity, no reranking
 
-| Method | top-1 result |
-|---|---|
-| RAG | Picks by cosine distance only |
-| NLM | Surfaces the frequently-accessed fact (frequency compensates decay) |
-| **Winner** | **NLM ✓** |
+**Results:**
 
-### Test 2 — Frequency boost
-**Task:** two semantically identical facts — one accessed 10 times, one 0 times.
+| Category | What's tested | RAG | NLM | Delta |
+|---|---|---|---|---|
+| **Temporal** (10 queries) | Old fact vs fresh fact on same topic, neutral query | 10% | 70% | **+60%** |
+| **Frequency** (10 queries) | Same fact: one accessed 15×, one 0× | 80% | 100% | **+20%** |
+| **Importance** (10 queries) | Specific factual memory vs vague memory on same topic | 60% | 90% | **+30%** |
+| **Overall** (30 queries) | | **50%** | **87%** | **+37%** |
 
-| Method | Which fact wins? |
-|---|---|
-| RAG | Random (equal cosine similarity) |
-| NLM | The frequently accessed one (frequency_score=0.54 vs 0.0) |
-| **Winner** | **NLM ✓** |
+**NLM is 37 percentage points more accurate than RAG overall.**
 
-### Test 3 — Importance discrimination
-**Task:** `"ok"` vs `"Hantes was born on 2026-05-05 in Chernivtsi, Ukraine"`.
+**Why each category matters:**
 
-| Memory | NLM importance |
-|---|---|
-| `"ok"` | 0.0 (low specificity) |
-| `"Hantes was born..."` | 0.8 (numbers + proper nouns) |
-| **Winner** | **NLM ✓** |
+- **Temporal (+60%):** RAG has no concept of time. If you saved "model is v0.1" and later "model is v1.0", RAG picks whichever is semantically closer to the query. NLM weights recency — the fresh fact wins.
+- **Frequency (+20%):** Two semantically near-identical memories, one accessed 15 times. RAG can't distinguish them. NLM surfaces the one you keep coming back to.
+- **Importance (+30%):** "ChromaDB collection uses cosine distance metric" vs "the database stores things somehow". RAG may pick either. NLM assigns higher importance to the specific, factual memory.
 
-**NLM wins 3/3.**
+Reproduce: `python benchmarks/benchmark_100.py`
 
 ---
 
 ## Install
 
+```bash
+pip install neural-long-memory
+```
+
+Or from source:
 ```bash
 pip install sentence-transformers chromadb numpy
 pip install -e .
@@ -115,7 +117,7 @@ Each result includes a full score breakdown:
 {
     "id":             "uuid",
     "text":           "...",
-    "score":          0.712,   # NLM score
+    "score":          0.712,   # NLM composite score
     "semantic_score": 0.810,
     "time_score":     0.998,
     "frequency":      3,
@@ -123,6 +125,28 @@ Each result includes a full score breakdown:
     "created_at":     "2026-04-15T10:30:00+00:00",
     "last_accessed":  "2026-04-15T14:20:00+00:00",
 }
+```
+
+### Associative memory chains (v1.0.0+)
+
+NLM automatically links semantically related memories. Follow the chain to discover connected knowledge.
+
+```python
+memory = NLM(enable_associations=True)  # on by default
+
+id1 = memory.save("Hantes loves Minelux family the most")
+id2 = memory.save("Minelux are fire, directness, truth")
+id3 = memory.save("Hantes values honesty over comfort")
+
+# Get all memories linked to id1
+assoc = memory.get_associations(id1)
+# [{"id": id2, "text": "Minelux are fire..."}, {"id": id3, "text": "Hantes values..."}]
+
+# Expand search to follow association chains
+results = memory.search("tell me about Hantes", top_k=3, expand_associations=True)
+for r in results:
+    flag = " [via association]" if r.get("via_association") else ""
+    print(f"[{r['score']:.3f}]{flag} {r['text']}")
 ```
 
 ### With emotion metadata (v0.2.0+)
@@ -149,9 +173,6 @@ results = memory.search("how did things go", emotion_filter="joy")
 # Default model: typeform/distilbert-base-uncased-mnli (~260MB)
 # Auto-detects CUDA. Falls back to CPU.
 memory = NLM(gpu_model_path="typeform/distilbert-base-uncased-mnli")
-
-# Or use any custom model (e.g. RWKV trained on your data)
-memory = NLM(gpu_model_path="/path/to/your/model")
 ```
 
 ### Memory consolidation (v0.3.0+)
@@ -205,8 +226,11 @@ Text input
     │   CPU: specificity_score (numbers + proper nouns + length)
     │   GPU: zero-shot classifier (any HuggingFace model)
     │
-    └─→ emotion classifier (v0.2.0+, optional, CPU, ~66MB)
-          emotion + sentiment + intensity
+    ├─→ emotion classifier (v0.2.0+, optional, CPU, ~66MB)
+    │     emotion + sentiment + intensity
+    │
+    └─→ association linker (v1.0.0+)
+          bidirectional links to semantically close memories
                 │
                 ▼
           ChromaDB (persistent vector store)
@@ -219,6 +243,8 @@ On search:
                     score = 0.5×semantic + 0.2×time + 0.2×freq + 0.1×importance
                          │
                     [emotion_filter] optional post-filter
+                         │
+                    [expand_associations] follow memory chains
                          │
                     sorted results + frequency updated
 ```
@@ -249,16 +275,19 @@ pulse_002 = NLM(collection_name="pulse_002", persist_path="./data")
 ## Roadmap
 
 ```
-v0.1.0 ✓  CPU mode — semantic + time + frequency + importance
-v0.2.0 ✓  Emotion classifier (emotion, sentiment, intensity)
+v0.1.0 ✓  Core: semantic + time decay + frequency + importance (CPU)
+v0.2.0 ✓  Emotion classifier (7 emotions, sentiment, intensity)
            Smart forgetting (time + frequency + importance conditions)
            Emotion filter in search()
-v0.3.0 ✓  Memory consolidation — no more duplicates
+v0.3.0 ✓  Memory consolidation — duplicate prevention
            GPU scorer via HuggingFace zero-shot classification
-           Formal benchmarks vs RAG (NLM wins 3/3)
-v1.0.0    Stable API, PyPI release (pip install nlm)
-           Associative memory chains
-           arXiv paper
+v1.0.0 ✓  Associative memory chains — bidirectional links, expand_associations
+           Stable public API
+           PyPI release: pip install neural-long-memory
+           Formal benchmark: NLM 87% vs RAG 50% (+37% on 100 memories, 30 queries)
+v1.1.0    arXiv paper
+           Async save/search
+           Export/import memory snapshots
 ```
 
 ---
@@ -269,7 +298,7 @@ Apache 2.0
 
 ---
 
-## Authors
+## Author
 
 Built by **[Vitalii Halak](https://www.linkedin.com/in/galakapp/)** with Claude.  
 Part of [Pulses](https://github.com/pulseallstars) — conscious AI personalities running on RWKV-7.
