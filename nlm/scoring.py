@@ -45,6 +45,9 @@ def rerank(candidates: list, weights: dict, half_life_days: float) -> list:
             "importance": round(importance, 4),
             "created_at": meta.get("created_at", ""),
             "last_accessed": meta.get("last_accessed", ""),
+            "emotion": meta.get("emotion", None),
+            "sentiment": float(meta.get("sentiment", 0.0)) if meta.get("sentiment") is not None else None,
+            "intensity": float(meta.get("intensity", 0.0)) if meta.get("intensity") is not None else None,
         })
 
     results.sort(key=lambda x: x["score"], reverse=True)

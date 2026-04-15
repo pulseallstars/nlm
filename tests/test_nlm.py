@@ -96,3 +96,87 @@ def test_repr(mem):
     r = repr(mem)
     assert "NLM" in r
     assert "CPU" in r
+
+
+# --- v0.2.0: emotion classifier ---
+
+def test_emotion_classify():
+    from nlm.emotion_classifier import EmotionClassifier
+    ec = EmotionClassifier()
+    result = ec.classify("I am so happy today!")
+    assert result["emotion"] in {"joy", "surprise", "neutral", "sadness", "anger", "fear", "disgust"}
+    assert -1.0 <= result["sentiment"] <= 1.0
+    assert 0.0 <= result["intensity"] <= 1.0
+
+
+def test_emotion_positive_sentiment():
+    from nlm.emotion_classifier import EmotionClassifier
+    ec = EmotionClassifier()
+    result = ec.classify("This is wonderful, I love it!")
+    assert result["emotion"] == "joy"
+    assert result["sentiment"] > 0
+
+
+def test_emotion_negative_sentiment():
+    from nlm.emotion_classifier import EmotionClassifier
+    ec = EmotionClassifier()
+    result = ec.classify("I am terrified and full of fear")
+    assert result["emotion"] == "fear"
+    assert result["sentiment"] < 0
+
+
+@pytest.fixture
+def mem_emotion(tmp_path):
+    return NLM(collection_name="test_e", persist_path=str(tmp_path), use_emotion=True)
+
+
+def test_save_stores_emotion(mem_emotion):
+    mem_emotion.save("I am really happy about the project progress!")
+    results = mem_emotion.search("happy project")
+    assert results[0]["emotion"] is not None
+    assert results[0]["intensity"] is not None
+
+
+def test_search_emotion_filter(mem_emotion):
+    mem_emotion.save("I am so happy and joyful today!")
+    mem_emotion.save("I am terrified and scared of failure")
+    results = mem_emotion.search("feelings", emotion_filter="joy")
+    assert len(results) >= 1
+    assert all(r["emotion"] == "joy" for r in results)
+
+
+def test_repr_with_emotion(mem_emotion):
+    assert "emotion" in repr(mem_emotion)
+    assert "CPU+emotion" in repr(mem_emotion)
+
+
+# --- v0.2.0: smart forgetting ---
+
+def test_forget_smart_deletes_weak(mem):
+    # Should be deleted: old + rare + unimportant
+    mem.save("ok", metadata={
+        "last_accessed": "2020-01-01T00:00:00+00:00",
+        "frequency": 1,
+        "importance": 0.1,
+    })
+    # Should survive: old but important
+    mem.save("Hantes born 2026-05-05 Chernivtsi Ukraine", metadata={
+        "last_accessed": "2020-01-01T00:00:00+00:00",
+        "frequency": 1,
+        "importance": 0.8,
+    })
+    deleted = mem.forget_smart(days=100, max_frequency=2, max_importance=0.3)
+    assert deleted == 1
+    assert mem.count() == 1
+
+
+def test_forget_smart_keeps_frequent(mem):
+    # Should survive: old + unimportant BUT frequently accessed
+    mem.save("ok", metadata={
+        "last_accessed": "2020-01-01T00:00:00+00:00",
+        "frequency": 10,
+        "importance": 0.1,
+    })
+    deleted = mem.forget_smart(days=100, max_frequency=2, max_importance=0.3)
+    assert deleted == 0
+    assert mem.count() == 1
