@@ -180,3 +180,66 @@ def test_forget_smart_keeps_frequent(mem):
     deleted = mem.forget_smart(days=100, max_frequency=2, max_importance=0.3)
     assert deleted == 0
     assert mem.count() == 1
+
+
+# --- v0.3.0: memory consolidation ---
+
+@pytest.fixture
+def mem_consolidation(tmp_path):
+    return NLM(
+        collection_name="test_c",
+        persist_path=str(tmp_path),
+        enable_consolidation=True,
+        consolidation_threshold=0.15,
+    )
+
+
+def test_consolidation_prevents_duplicate(mem_consolidation):
+    id1 = mem_consolidation.save("Hantes lives in Chernivtsi")
+    id2 = mem_consolidation.save("Hantes is from Chernivtsi city")
+    assert mem_consolidation.count() == 1
+    assert id1 == id2
+
+
+def test_consolidation_boosts_importance(mem_consolidation):
+    mem_consolidation.save("Hantes lives in Chernivtsi")
+    all_before = mem_consolidation._storage.get_all()
+    importance_before = float(all_before[0]["metadata"]["importance"])
+
+    mem_consolidation.save("Hantes is from Chernivtsi city")
+
+    all_after = mem_consolidation._storage.get_all()
+    importance_after = float(all_after[0]["metadata"]["importance"])
+    assert importance_after > importance_before
+
+
+def test_consolidation_disabled(tmp_path):
+    mem = NLM(collection_name="test_nc", persist_path=str(tmp_path),
+              enable_consolidation=False)
+    mem.save("Hantes lives in Chernivtsi")
+    mem.save("Hantes is from Chernivtsi city")
+    assert mem.count() == 2
+
+
+def test_consolidation_different_texts_not_merged(mem_consolidation):
+    id1 = mem_consolidation.save("Hantes loves coffee")
+    id2 = mem_consolidation.save("The RWKV model is trained on Pulses data")
+    assert id1 != id2
+    assert mem_consolidation.count() == 2
+
+
+# --- v0.3.0: GPU scorer ---
+
+def test_gpu_scorer_range():
+    from nlm.gpu_scorer import GPUScorer
+    scorer = GPUScorer()
+    score = scorer.score("Hantes was born on 2026-05-05 in Chernivtsi, Ukraine")
+    assert 0.0 <= score <= 1.0
+
+
+def test_gpu_scorer_important_vs_trivial():
+    from nlm.gpu_scorer import GPUScorer
+    scorer = GPUScorer()
+    high = scorer.score("Hantes was born on 2026-05-05 in Chernivtsi, Ukraine")
+    low = scorer.score("ok")
+    assert high > low

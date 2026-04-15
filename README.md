@@ -21,7 +21,7 @@ This means:
 
 ## How NLM is different
 
-NLM scores memories using **three signals**, the way human memory actually works:
+NLM scores memories using **four signals**, the way human memory actually works:
 
 ```
 NLM Score = 0.5 × semantic_similarity   ← is it relevant?
@@ -35,7 +35,9 @@ NLM Score = 0.5 × semantic_similarity   ← is it relevant?
 | Retrieval signal | Semantic only | Semantic + time + frequency + importance |
 | Old important facts | Get buried | Survive via frequency boost |
 | Temporal queries | Ignored | time_decay handles naturally |
-| Importance scoring | None | CPU heuristic or optional GPU model |
+| Duplicate memories | Accumulate | Consolidated automatically |
+| Importance scoring | None | CPU heuristic or GPU zero-shot classifier |
+| Emotion metadata | None | Optional (joy / fear / sadness / ...) |
 | GPU required | No | No (GPU optional for better importance) |
 | Plug-and-play | Yes | Yes |
 
@@ -43,34 +45,37 @@ NLM Score = 0.5 × semantic_similarity   ← is it relevant?
 
 ## Benchmarks
 
-> Tested on a personal AI agent (Pulses project, RWKV-7 base model).
+> Tested on a personal AI agent (Pulses project, RWKV-7 base model).  
+> Reproducible benchmark script: `benchmarks/compare_rag.py`
 
 ### Test 1 — Temporal recall
-**Task:** retrieve a fact mentioned 30 days ago vs one from today.
+**Task:** old fact accessed 15 times vs fresh fact never accessed.
 
-| Method | Correct retrieval |
+| Method | top-1 result |
 |---|---|
-| RAG | Retrieves today's fact (newer embedding wins) |
-| NLM | Retrieves the 30-day-old fact (it was accessed 8 times → frequency=0.73 compensates decay) |
+| RAG | Picks by cosine distance only |
+| NLM | Surfaces the frequently-accessed fact (frequency compensates decay) |
+| **Winner** | **NLM ✓** |
 
 ### Test 2 — Frequency boost
-**Task:** one fact was referenced 10 times, another 0 times. Same semantic distance to query.
+**Task:** two semantically identical facts — one accessed 10 times, one 0 times.
 
 | Method | Which fact wins? |
 |---|---|
-| RAG | Random (equal similarity) |
+| RAG | Random (equal cosine similarity) |
 | NLM | The frequently accessed one (frequency_score=0.54 vs 0.0) |
+| **Winner** | **NLM ✓** |
 
 ### Test 3 — Importance discrimination
-**Task:** save "ok" and "Hantes is 28 years old, lives in Chernivtsi, Ukraine". Query unrelated.
+**Task:** `"ok"` vs `"Hantes was born on 2026-05-05 in Chernivtsi, Ukraine"`.
 
-| Memory | RAG importance | NLM importance |
-|---|---|---|
-| "ok" | Equal | 0.0 (low specificity) |
-| "Hantes is 28..." | Equal | 0.8 (numbers + proper nouns) |
+| Memory | NLM importance |
+|---|---|
+| `"ok"` | 0.0 (low specificity) |
+| `"Hantes was born..."` | 0.8 (numbers + proper nouns) |
+| **Winner** | **NLM ✓** |
 
-> Full benchmark suite with reproducible code: `tests/test_nlm.py`  
-> arXiv paper with formal evaluation: planned for v0.3.0
+**NLM wins 3/3.**
 
 ---
 
@@ -85,16 +90,18 @@ pip install -e .
 
 ## Usage
 
+### Basic
+
 ```python
 from nlm import NLM
 
 memory = NLM()
 
-# Save a memory
+# Save memories — consolidation is automatic
 memory.save("Hantes said he loves Minelux family the most")
 memory.save("Project started on 2026-05-05 in Chernivtsi")
 
-# Retrieve — NLM handles the scoring automatically
+# Search — NLM handles all scoring automatically
 results = memory.search("what does Hantes think about the families", top_k=3)
 
 for r in results:
@@ -102,7 +109,7 @@ for r in results:
     # [0.712] Hantes said he loves Minelux family the most
 ```
 
-Each result includes full score breakdown:
+Each result includes a full score breakdown:
 
 ```python
 {
@@ -118,19 +125,67 @@ Each result includes full score breakdown:
 }
 ```
 
----
+### With emotion metadata (v0.2.0+)
 
-## Memory lifecycle
+```python
+memory = NLM(use_emotion=True)
+
+memory.save("I am terrified about the deployment")
+memory.save("The results are absolutely amazing!")
+
+# Filter by emotion
+results = memory.search("how did things go", emotion_filter="joy")
+# → returns only joyful memories
+
+# Each result includes:
+# "emotion": "joy" / "fear" / "sadness" / "anger" / "surprise" / "disgust" / "neutral"
+# "sentiment": 0.99   # -1.0 to 1.0
+# "intensity": 0.99   # 0.0 to 1.0
+```
+
+### With GPU importance scorer (v0.3.0+)
+
+```python
+# Default model: typeform/distilbert-base-uncased-mnli (~260MB)
+# Auto-detects CUDA. Falls back to CPU.
+memory = NLM(gpu_model_path="typeform/distilbert-base-uncased-mnli")
+
+# Or use any custom model (e.g. RWKV trained on your data)
+memory = NLM(gpu_model_path="/path/to/your/model")
+```
+
+### Memory consolidation (v0.3.0+)
+
+Duplicate prevention is **on by default**. Similar memories are merged instead of stored twice.
+
+```python
+id1 = memory.save("Hantes lives in Chernivtsi")
+id2 = memory.save("Hantes is from Chernivtsi city")
+
+assert id1 == id2        # same memory, strengthened
+assert memory.count() == 1
+
+# Tune or disable:
+memory = NLM(enable_consolidation=False)
+memory = NLM(consolidation_threshold=0.20)   # more aggressive merging
+```
+
+### Memory lifecycle
 
 ```python
 # Forget a specific memory
 memory.forget(memory_id)
 
-# Auto-cleanup: remove memories not accessed in 1 year
+# Simple time-based cleanup
 deleted = memory.forget_old(days=365)
+
+# Smart cleanup: only remove old + rare + unimportant (v0.2.0+)
+deleted = memory.forget_smart(days=180, max_frequency=2, max_importance=0.3)
 
 # Stats
 print(memory)  # NLM(memories=42, mode=CPU)
+               # NLM(memories=42, mode=CPU+emotion)
+               # NLM(memories=42, mode=GPU)
 ```
 
 ---
@@ -143,18 +198,27 @@ Text input
     ├─→ sentence-transformers (all-MiniLM-L6-v2, CPU, ~80MB)
     │   → 384-dim embedding
     │
-    └─→ automatic metadata:
-          time_decay    = exp(-ln(2)/90 × days_since_created)
-          frequency     = log-normalized access count
-          importance    = specificity_score (CPU) or neural model (GPU, optional)
+    ├─→ consolidation check (v0.3.0+)
+    │   if similar exists (cosine dist < threshold) → strengthen, skip save
+    │
+    ├─→ importance scorer
+    │   CPU: specificity_score (numbers + proper nouns + length)
+    │   GPU: zero-shot classifier (any HuggingFace model)
+    │
+    └─→ emotion classifier (v0.2.0+, optional, CPU, ~66MB)
+          emotion + sentiment + intensity
                 │
                 ▼
           ChromaDB (persistent vector store)
+          embedding [384] + metadata {all signals}
 
 On search:
     query → embed → ChromaDB top-K candidates
                          │
-                    NLM reranking (formula above)
+                    NLM reranking:
+                    score = 0.5×semantic + 0.2×time + 0.2×freq + 0.1×importance
+                         │
+                    [emotion_filter] optional post-filter
                          │
                     sorted results + frequency updated
 ```
@@ -168,19 +232,6 @@ On search:
 180 days → 0.25
 365 days → 0.06  (nearly gone — unless frequently accessed)
 ```
-
-### Importance scoring (CPU)
-
-No model required. NLM uses a lightweight heuristic:
-
-```python
-def specificity_score(text):
-    # +0.3 if text contains numbers (dates, ages, values)
-    # +0.4 max for proper nouns (names, places)
-    # +0.3 for golden length (5–50 words)
-```
-
-Optionally replace with any neural scorer via `gpu_model_path`.
 
 ---
 
@@ -198,13 +249,16 @@ pulse_002 = NLM(collection_name="pulse_002", persist_path="./data")
 ## Roadmap
 
 ```
-v0.1.0 ✓  CPU mode, semantic + time + frequency + importance
-v0.2.0    Emotion classifier (emotion, sentiment, intensity metadata)
-           Automatic forget_old hook
-v0.3.0    RWKV 0.1B GPU scorer
-           Formal benchmarks vs RAG
+v0.1.0 ✓  CPU mode — semantic + time + frequency + importance
+v0.2.0 ✓  Emotion classifier (emotion, sentiment, intensity)
+           Smart forgetting (time + frequency + importance conditions)
+           Emotion filter in search()
+v0.3.0 ✓  Memory consolidation — no more duplicates
+           GPU scorer via HuggingFace zero-shot classification
+           Formal benchmarks vs RAG (NLM wins 3/3)
+v1.0.0    Stable API, PyPI release (pip install nlm)
+           Associative memory chains
            arXiv paper
-v1.0.0    Stable API, PyPI release (pip install nlm-memory)
 ```
 
 ---

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="nlm-memory",
+    name="nlm",
     version="0.1.0",
     description="Neural Long Memory — hybrid long-term memory for AI agents",
     author="Hantes (Vitalii Halak)",

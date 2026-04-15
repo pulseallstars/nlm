@@ -19,6 +19,8 @@ class NLM:
         half_life_days: float = 90,
         gpu_model_path: str = None,
         use_emotion: bool = False,
+        enable_consolidation: bool = True,
+        consolidation_threshold: float = 0.15,
     ):
         self._weights = {
             "semantic": semantic_weight,
@@ -31,20 +33,29 @@ class NLM:
         self._storage = Storage(collection_name, persist_path)
         self._gpu_scorer = None
         self._emotion = None
+        self._enable_consolidation = enable_consolidation
+        self._consolidation_threshold = consolidation_threshold
 
         if gpu_model_path:
-            try:
-                from nlm.gpu_scorer import GPUScorer
-                self._gpu_scorer = GPUScorer(gpu_model_path)
-            except ImportError:
-                pass
+            from nlm.gpu_scorer import GPUScorer
+            self._gpu_scorer = GPUScorer(gpu_model_path)
 
         if use_emotion:
             from nlm.emotion_classifier import EmotionClassifier
             self._emotion = EmotionClassifier()
 
     def save(self, text: str, metadata: dict = None) -> str:
-        """Store a memory. Returns the memory id."""
+        """Store a memory. Returns memory id.
+
+        If consolidation is enabled and a similar memory exists,
+        strengthens the existing one and returns its id instead.
+        """
+        if self._enable_consolidation and self._storage.count() > 0:
+            similar = self._find_similar(text)
+            if similar:
+                self._consolidate(similar["id"], similar["metadata"])
+                return similar["id"]
+
         memory_id = str(uuid.uuid4())
         importance = (
             self._gpu_scorer.score(text)
@@ -66,6 +77,23 @@ class NLM:
         embedding = self._embedder.encode(text)
         self._storage.add(memory_id, embedding, meta)
         return memory_id
+
+    def _find_similar(self, text: str):
+        """Return the closest existing memory if within consolidation threshold."""
+        embedding = self._embedder.encode(text)
+        candidates = self._storage.query(embedding, n_results=1)
+        if candidates and candidates[0]["distance"] < self._consolidation_threshold:
+            return candidates[0]
+        return None
+
+    def _consolidate(self, existing_id: str, existing_meta: dict):
+        """Strengthen an existing memory instead of creating a duplicate."""
+        existing_meta["frequency"] = int(existing_meta.get("frequency", 0)) + 1
+        existing_meta["importance"] = min(
+            1.0, float(existing_meta.get("importance", 0.5)) * 1.15
+        )
+        existing_meta["last_accessed"] = now_iso()
+        self._storage.update_metadata(existing_id, existing_meta)
 
     def search(self, query: str, top_k: int = 5, emotion_filter: str = None) -> list:
         """Find most relevant memories using NLM scoring.
@@ -90,9 +118,9 @@ class NLM:
         results = ranked[:top_k]
 
         # Update frequency and last_accessed for returned memories
+        all_items = self._storage.get_all()
+        meta_map = {item["id"]: item["metadata"] for item in all_items}
         for r in results:
-            all_items = self._storage.get_all()
-            meta_map = {item["id"]: item["metadata"] for item in all_items}
             if r["id"] in meta_map:
                 meta = meta_map[r["id"]]
                 meta["frequency"] = int(meta.get("frequency", 0)) + 1
@@ -129,12 +157,8 @@ class NLM:
         max_frequency: int = 2,
         max_importance: float = 0.3,
     ) -> int:
-        """Delete memories that satisfy ALL three conditions:
-        - not accessed for `days` days
-        - accessed fewer than `max_frequency` times
-        - importance below `max_importance`
-
-        Preserves old memories that are important or frequently recalled.
+        """Delete memories satisfying ALL three conditions:
+        not accessed for `days` days AND frequency < max_frequency AND importance < max_importance.
         Returns count deleted.
         """
         now = datetime.now(timezone.utc)
@@ -149,7 +173,6 @@ class NLM:
                 age_days = (now - dt).total_seconds() / 86400
                 frequency = int(meta.get("frequency", 0))
                 importance = float(meta.get("importance", 0.5))
-
                 if age_days >= days and frequency < max_frequency and importance < max_importance:
                     self._storage.delete(m["id"])
                     deleted += 1
