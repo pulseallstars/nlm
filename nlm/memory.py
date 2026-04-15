@@ -21,6 +21,9 @@ class NLM:
         use_emotion: bool = False,
         enable_consolidation: bool = True,
         consolidation_threshold: float = 0.15,
+        enable_associations: bool = True,
+        association_threshold: float = 0.55,
+        max_associations: int = 3,
     ):
         self._weights = {
             "semantic": semantic_weight,
@@ -35,6 +38,9 @@ class NLM:
         self._emotion = None
         self._enable_consolidation = enable_consolidation
         self._consolidation_threshold = consolidation_threshold
+        self._enable_associations = enable_associations
+        self._association_threshold = association_threshold
+        self._max_associations = max_associations
 
         if gpu_model_path:
             from nlm.gpu_scorer import GPUScorer
@@ -48,7 +54,9 @@ class NLM:
         """Store a memory. Returns memory id.
 
         If consolidation is enabled and a similar memory exists,
-        strengthens the existing one and returns its id instead.
+        strengthens the existing one and returns its id.
+        If associations are enabled, links the new memory to
+        semantically related existing memories.
         """
         if self._enable_consolidation and self._storage.count() > 0:
             similar = self._find_similar(text)
@@ -74,8 +82,13 @@ class NLM:
         if metadata:
             meta.update({k: v for k, v in metadata.items()
                           if isinstance(v, (str, int, float, bool))})
+
         embedding = self._embedder.encode(text)
         self._storage.add(memory_id, embedding, meta)
+
+        if self._enable_associations and self._storage.count() > 1:
+            self._link_memories(memory_id, embedding, meta)
+
         return memory_id
 
     def _find_similar(self, text: str):
@@ -95,7 +108,57 @@ class NLM:
         existing_meta["last_accessed"] = now_iso()
         self._storage.update_metadata(existing_id, existing_meta)
 
-    def search(self, query: str, top_k: int = 5, emotion_filter: str = None) -> list:
+    def _link_memories(self, new_id: str, embedding: list, new_meta: dict):
+        """Create bidirectional associations between new_id and semantically close memories."""
+        candidates = self._storage.query(embedding, n_results=self._max_associations + 1)
+        links = [
+            c["id"] for c in candidates
+            if c["distance"] < self._association_threshold and c["id"] != new_id
+        ][:self._max_associations]
+
+        if not links:
+            return
+
+        # Update new memory's related_ids
+        new_meta["related_ids"] = ",".join(links)
+        self._storage.update_metadata(new_id, new_meta)
+
+        # Update existing memories — bidirectional link
+        all_items = {item["id"]: item["metadata"] for item in self._storage.get_all()}
+        for lid in links:
+            if lid not in all_items:
+                continue
+            existing_ids = set(
+                i for i in all_items[lid].get("related_ids", "").split(",") if i
+            )
+            existing_ids.add(new_id)
+            all_items[lid]["related_ids"] = ",".join(
+                list(existing_ids)[: self._max_associations]
+            )
+            self._storage.update_metadata(lid, all_items[lid])
+
+    def get_associations(self, memory_id: str) -> list:
+        """Return all memories linked to memory_id.
+
+        Returns list of {"id": str, "text": str}.
+        """
+        all_items = {item["id"]: item["metadata"] for item in self._storage.get_all()}
+        if memory_id not in all_items:
+            return []
+        ids = [i for i in all_items[memory_id].get("related_ids", "").split(",") if i]
+        return [
+            {"id": aid, "text": all_items[aid].get("text", "")}
+            for aid in ids
+            if aid in all_items
+        ]
+
+    def search(
+        self,
+        query: str,
+        top_k: int = 5,
+        emotion_filter: str = None,
+        expand_associations: bool = False,
+    ) -> list:
         """Find most relevant memories using NLM scoring.
 
         Args:
@@ -103,6 +166,8 @@ class NLM:
             top_k: Number of results to return.
             emotion_filter: Optional emotion label to filter by
                             (joy / sadness / anger / fear / surprise / disgust / neutral).
+            expand_associations: If True, include memories linked via associations
+                                 (marked with via_association=True, score = parent × 0.8).
         """
         embedding = self._embedder.encode(query)
         n_candidates = top_k * 6 if emotion_filter else top_k * 2
@@ -117,11 +182,41 @@ class NLM:
 
         results = ranked[:top_k]
 
-        # Update frequency and last_accessed for returned memories
+        # Expand via associations
+        if expand_associations and results:
+            all_meta = {i["id"]: i["metadata"] for i in self._storage.get_all()}
+            seen = {r["id"] for r in results}
+            extra = []
+            for r in results:
+                for aid in r.get("related_ids", []):
+                    if aid in seen or aid not in all_meta:
+                        continue
+                    seen.add(aid)
+                    ameta = all_meta[aid]
+                    extra.append({
+                        "id": aid,
+                        "text": ameta.get("text", ""),
+                        "score": round(r["score"] * 0.8, 4),
+                        "semantic_score": None,
+                        "time_score": None,
+                        "frequency": int(ameta.get("frequency", 0)),
+                        "importance": float(ameta.get("importance", 0.5)),
+                        "created_at": ameta.get("created_at", ""),
+                        "last_accessed": ameta.get("last_accessed", ""),
+                        "emotion": ameta.get("emotion", None),
+                        "sentiment": float(ameta.get("sentiment", 0.0)) if ameta.get("sentiment") is not None else None,
+                        "intensity": float(ameta.get("intensity", 0.0)) if ameta.get("intensity") is not None else None,
+                        "related_ids": [i for i in ameta.get("related_ids", "").split(",") if i],
+                        "via_association": True,
+                    })
+            # Associations are appended beyond top_k — not competing with direct results
+            results = results + sorted(extra, key=lambda x: x["score"], reverse=True)
+
+        # Update frequency and last_accessed
         all_items = self._storage.get_all()
         meta_map = {item["id"]: item["metadata"] for item in all_items}
         for r in results:
-            if r["id"] in meta_map:
+            if r["id"] in meta_map and not r.get("via_association"):
                 meta = meta_map[r["id"]]
                 meta["frequency"] = int(meta.get("frequency", 0)) + 1
                 meta["last_accessed"] = now_iso()

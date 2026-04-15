@@ -45,37 +45,26 @@ NLM Score = 0.5 × semantic_similarity   ← is it relevant?
 
 ## Benchmarks
 
-> Tested on a personal AI agent (Pulses project, RWKV-7 base model).  
-> Reproducible benchmark script: `benchmarks/compare_rag.py`
+### Formal benchmark — 100 memories, 30 queries
 
-### Test 1 — Temporal recall
-**Task:** old fact accessed 15 times vs fresh fact never accessed.
+> Reproducible: `python benchmarks/benchmark_100.py`
 
-| Method | top-1 result |
-|---|---|
-| RAG | Picks by cosine distance only |
-| NLM | Surfaces the frequently-accessed fact (frequency compensates decay) |
-| **Winner** | **NLM ✓** |
+**Setup:**
+- 100 memories (60 test pairs + 40 unrelated fillers)
+- 30 queries across 3 categories
+- Metric: top-1 accuracy (did the right memory rank first?)
+- RAG baseline: pure cosine similarity, no reranking
 
-### Test 2 — Frequency boost
-**Task:** two semantically identical facts — one accessed 10 times, one 0 times.
+| Category | What's tested | RAG | NLM | Delta |
+|---|---|---|---|---|
+| **Temporal** (10 queries) | Old fact vs fresh fact on same topic | 10% | 70% | **+60%** |
+| **Frequency** (10 queries) | Same fact, one accessed 15× vs 0× | 80% | 100% | **+20%** |
+| **Importance** (10 queries) | Specific factual vs vague memory | 60% | 90% | **+30%** |
+| **Overall** (30 queries) | | **50%** | **87%** | **+37%** |
 
-| Method | Which fact wins? |
-|---|---|
-| RAG | Random (equal cosine similarity) |
-| NLM | The frequently accessed one (frequency_score=0.54 vs 0.0) |
-| **Winner** | **NLM ✓** |
+**NLM is 37 percentage points more accurate than RAG overall.**
 
-### Test 3 — Importance discrimination
-**Task:** `"ok"` vs `"Hantes was born on 2026-05-05 in Chernivtsi, Ukraine"`.
-
-| Memory | NLM importance |
-|---|---|
-| `"ok"` | 0.0 (low specificity) |
-| `"Hantes was born..."` | 0.8 (numbers + proper nouns) |
-| **Winner** | **NLM ✓** |
-
-**NLM wins 3/3.**
+The biggest gain is on temporal queries (+60%): RAG doesn't know what's recent, NLM weights freshness directly into the score. Frequency and importance show consistent gains in every category.
 
 ---
 
@@ -255,9 +244,10 @@ v0.2.0 ✓  Emotion classifier (emotion, sentiment, intensity)
            Emotion filter in search()
 v0.3.0 ✓  Memory consolidation — no more duplicates
            GPU scorer via HuggingFace zero-shot classification
-           Formal benchmarks vs RAG (NLM wins 3/3)
-v1.0.0    Stable API, PyPI release (pip install nlm)
-           Associative memory chains
+v1.0.0 ✓  Stable API, PyPI release (pip install nlm)
+           Associative memory chains (bidirectional links, expand_associations)
+           Formal benchmark: NLM 87% vs RAG 50% (+37% on 100 memories)
+v1.1.0    Temporal weighting improvements
            arXiv paper
 ```
 
