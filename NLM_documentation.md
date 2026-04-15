@@ -358,7 +358,7 @@ Apache 2.0 — вільне використання для комерційни
 
 ## Автори
 
-Розроблено Хантесом (Chernivtsi, Ukraine) разом з Claude.
+Розроблено Хантесом — Vitalii Halak (Chernivtsi, Ukraine) разом з Claude.
 Частина проекту Pulses — живого AI агента на RWKV-7.
 
 *Квітень 2026*

@@ -1,0 +1,11 @@
+# Core (CPU mode)
+sentence-transformers>=2.2.0
+chromadb>=0.4.0
+numpy>=1.24.0
+
+# Optional: GPU scoring
+# torch>=2.0.0
+# transformers>=4.30.0
+
+# Dev / testing
+pytest>=7.0.0
