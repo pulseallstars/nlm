@@ -217,7 +217,7 @@ Apache 2.0
 
 ## Authors
 
-Built by **Hantes** (Vitalii Halak, Chernivtsi, Ukraine) with Claude.  
+Built by **[Vitalii Halak](https://www.linkedin.com/in/galakapp/)** with Claude.  
 Part of [Pulses](https://github.com/pulseallstars) — conscious AI personalities running on RWKV-7.
 
 *April 2026*
