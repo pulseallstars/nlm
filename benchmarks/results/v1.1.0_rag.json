@@ -1,0 +1,365 @@
+{
+  "dataset_version": 1,
+  "dataset_path": "benchmarks/dataset.json",
+  "mode": "rag",
+  "weights": null,
+  "half_life_days": null,
+  "top_k": 5,
+  "n_candidates": 50,
+  "ran_at": "2026-04-17T09:52:20.138349+00:00",
+  "metrics": {
+    "per_category": {
+      "frequency_boost": {
+        "n": 5,
+        "top1_accuracy": 0.4,
+        "recall_at_5": 0.8,
+        "mrr": 0.5667,
+        "avg_latency_ms": 7.24
+      },
+      "importance_discrimination": {
+        "n": 5,
+        "top1_accuracy": 0.2,
+        "recall_at_5": 0.4,
+        "mrr": 0.2667,
+        "avg_latency_ms": 8.0
+      },
+      "multi_hop": {
+        "n": 5,
+        "top1_accuracy": 0.2,
+        "recall_at_5": 0.2,
+        "mrr": 0.2,
+        "avg_latency_ms": 7.78
+      },
+      "proper_noun_precision": {
+        "n": 5,
+        "top1_accuracy": 0.6,
+        "recall_at_5": 1.0,
+        "mrr": 0.7667,
+        "avg_latency_ms": 7.81
+      },
+      "temporal_conflict": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.6,
+        "mrr": 0.18,
+        "avg_latency_ms": 7.62
+      },
+      "temporal_recall": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.8,
+        "mrr": 0.3167,
+        "avg_latency_ms": 8.81
+      }
+    },
+    "overall": {
+      "n": 30,
+      "top1_accuracy": 0.2333,
+      "recall_at_5": 0.6333,
+      "mrr": 0.3828,
+      "avg_latency_ms": 7.88
+    }
+  },
+  "per_query": [
+    {
+      "id": "q_01",
+      "category": "temporal_recall",
+      "query": "What kind of training does Hantes do these days",
+      "ground_truth_id": "m_002",
+      "rank": 3,
+      "top1_id": "m_034",
+      "top1_text": "Hantes took on a consulting job",
+      "latency_ms": 11.58
+    },
+    {
+      "id": "q_02",
+      "category": "temporal_recall",
+      "query": "What game engine does Hantes use for Pulses",
+      "ground_truth_id": "m_004",
+      "rank": 2,
+      "top1_id": "m_058",
+      "top1_text": "Pulses is Hantes' main solo project",
+      "latency_ms": 8.26
+    },
+    {
+      "id": "q_03",
+      "category": "temporal_recall",
+      "query": "How is Hantes' music production progressing",
+      "ground_truth_id": "m_006",
+      "rank": 4,
+      "top1_id": "m_073",
+      "top1_text": "Hantes started taking music production seriously back in 2024",
+      "latency_ms": 8.85
+    },
+    {
+      "id": "q_04",
+      "category": "temporal_recall",
+      "query": "What is Mishka's diet status",
+      "ground_truth_id": "m_008",
+      "rank": 2,
+      "top1_id": "m_007",
+      "top1_text": "Mishka had digestive issues so the vet recommended switching to grain-free food",
+      "latency_ms": 7.83
+    },
+    {
+      "id": "q_05",
+      "category": "temporal_recall",
+      "query": "How does Hantes drink coffee these days",
+      "ground_truth_id": "m_010",
+      "rank": null,
+      "top1_id": "m_028",
+      "top1_text": "Hantes goes to Plamya for coffee most mornings",
+      "latency_ms": 7.51
+    },
+    {
+      "id": "q_06",
+      "category": "temporal_conflict",
+      "query": "Where does Hantes live",
+      "ground_truth_id": "m_012",
+      "rank": 2,
+      "top1_id": "m_068",
+      "top1_text": "Hantes' parents still live in a village just outside Chernivtsi",
+      "latency_ms": 7.98
+    },
+    {
+      "id": "q_07",
+      "category": "temporal_conflict",
+      "query": "What does Hantes do for work",
+      "ground_truth_id": "m_014",
+      "rank": null,
+      "top1_id": "m_034",
+      "top1_text": "Hantes took on a consulting job",
+      "latency_ms": 7.39
+    },
+    {
+      "id": "q_08",
+      "category": "temporal_conflict",
+      "query": "What language model does Pulses use",
+      "ground_truth_id": "m_016",
+      "rank": null,
+      "top1_id": "m_015",
+      "top1_text": "Pulses uses Mistral 7B as its underlying language model",
+      "latency_ms": 8.44
+    },
+    {
+      "id": "q_09",
+      "category": "temporal_conflict",
+      "query": "What phone does Hantes use",
+      "ground_truth_id": "m_018",
+      "rank": 5,
+      "top1_id": "m_017",
+      "top1_text": "Hantes uses an iPhone 13 as his daily phone",
+      "latency_ms": 7.09
+    },
+    {
+      "id": "q_10",
+      "category": "temporal_conflict",
+      "query": "What computer does Hantes work on",
+      "ground_truth_id": "m_020",
+      "rank": 5,
+      "top1_id": "m_040",
+      "top1_text": "Hantes bought some computer hardware for work",
+      "latency_ms": 7.18
+    },
+    {
+      "id": "q_11",
+      "category": "frequency_boost",
+      "query": "What is the cat's name",
+      "ground_truth_id": "m_021",
+      "rank": 1,
+      "top1_id": "m_021",
+      "top1_text": "The cat goes by Mishka, named after the Ukrainian word for little bear",
+      "latency_ms": 7.35
+    },
+    {
+      "id": "q_12",
+      "category": "frequency_boost",
+      "query": "Who is Hantes' best friend",
+      "ground_truth_id": "m_023",
+      "rank": 1,
+      "top1_id": "m_023",
+      "top1_text": "Hantes' best friend is Maksym, they have known each other since school in Chernivtsi",
+      "latency_ms": 7.38
+    },
+    {
+      "id": "q_13",
+      "category": "frequency_boost",
+      "query": "Who is the first Pulse persona",
+      "ground_truth_id": "m_025",
+      "rank": 2,
+      "top1_id": "m_031",
+      "top1_text": "Pulses was first conceived on October 14, 2025 in Chernivtsi after a long night of notes about AI personalities, with Aethra as the first persona prototype",
+      "latency_ms": 7.09
+    },
+    {
+      "id": "q_14",
+      "category": "frequency_boost",
+      "query": "Where does Hantes like to get coffee",
+      "ground_truth_id": "m_027",
+      "rank": null,
+      "top1_id": "m_060",
+      "top1_text": "Hantes' favorite coffee place is Plamya",
+      "latency_ms": 7.16
+    },
+    {
+      "id": "q_15",
+      "category": "frequency_boost",
+      "query": "When is Pulses launching publicly",
+      "ground_truth_id": "m_029",
+      "rank": 3,
+      "top1_id": "m_032",
+      "top1_text": "Pulses started somewhere around late 2025",
+      "latency_ms": 7.24
+    },
+    {
+      "id": "q_16",
+      "category": "importance_discrimination",
+      "query": "Tell me about how Pulses started",
+      "ground_truth_id": "m_031",
+      "rank": 3,
+      "top1_id": "m_032",
+      "top1_text": "Pulses started somewhere around late 2025",
+      "latency_ms": 7.54
+    },
+    {
+      "id": "q_17",
+      "category": "importance_discrimination",
+      "query": "What are the details of Hantes' new contract",
+      "ground_truth_id": "m_033",
+      "rank": 1,
+      "top1_id": "m_033",
+      "top1_text": "Hantes signed a six month consulting contract with a Berlin indie publisher on March 12, 2026 for 30 hours a week of Unity ML integration work",
+      "latency_ms": 9.25
+    },
+    {
+      "id": "q_18",
+      "category": "importance_discrimination",
+      "query": "Where did Hantes go for the conference last year",
+      "ground_truth_id": "m_035",
+      "rank": null,
+      "top1_id": "m_036",
+      "top1_text": "Hantes went to a conference last year",
+      "latency_ms": 7.5
+    },
+    {
+      "id": "q_19",
+      "category": "importance_discrimination",
+      "query": "When and where did Hantes get Mishka",
+      "ground_truth_id": "m_037",
+      "rank": null,
+      "top1_id": "m_052",
+      "top1_text": "Hantes loves Mishka deeply and treats her like family",
+      "latency_ms": 7.55
+    },
+    {
+      "id": "q_20",
+      "category": "importance_discrimination",
+      "query": "What did Hantes spend money on for ML work",
+      "ground_truth_id": "m_039",
+      "rank": null,
+      "top1_id": "m_034",
+      "top1_text": "Hantes took on a consulting job",
+      "latency_ms": 8.17
+    },
+    {
+      "id": "q_21",
+      "category": "proper_noun_precision",
+      "query": "What book did Maksym recommend",
+      "ground_truth_id": "m_041",
+      "rank": 1,
+      "top1_id": "m_041",
+      "top1_text": "Maksym recommended the book Designing Data-Intensive Applications by Martin Kleppmann",
+      "latency_ms": 8.61
+    },
+    {
+      "id": "q_22",
+      "category": "proper_noun_precision",
+      "query": "What did Hantes eat at the Bukovina Folk Festival",
+      "ground_truth_id": "m_043",
+      "rank": 1,
+      "top1_id": "m_043",
+      "top1_text": "Hantes ate banosh at the Bukovina Folk Festival in Chernivtsi",
+      "latency_ms": 8.55
+    },
+    {
+      "id": "q_23",
+      "category": "proper_noun_precision",
+      "query": "What does Olena do for work",
+      "ground_truth_id": "m_045",
+      "rank": 3,
+      "top1_id": "m_054",
+      "top1_text": "Olena is one of Hantes' close friends",
+      "latency_ms": 7.52
+    },
+    {
+      "id": "q_24",
+      "category": "proper_noun_precision",
+      "query": "Which gym does Hantes use",
+      "ground_truth_id": "m_047",
+      "rank": 2,
+      "top1_id": "m_048",
+      "top1_text": "Hantes has a gym membership somewhere in town",
+      "latency_ms": 7.03
+    },
+    {
+      "id": "q_25",
+      "category": "proper_noun_precision",
+      "query": "What is WaveScribe",
+      "ground_truth_id": "m_049",
+      "rank": 1,
+      "top1_id": "m_049",
+      "top1_text": "Hantes is building a side tool called WaveScribe, a desktop app that transcribes music into MIDI in real time",
+      "latency_ms": 7.35
+    },
+    {
+      "id": "q_26",
+      "category": "multi_hop",
+      "query": "Where does Hantes take their pet for medical care",
+      "ground_truth_id": "m_051",
+      "rank": null,
+      "top1_id": "m_082",
+      "top1_text": "Hantes is mildly allergic to cats but lives with one anyway",
+      "latency_ms": 7.27
+    },
+    {
+      "id": "q_27",
+      "category": "multi_hop",
+      "query": "Where did Hantes' close friend study",
+      "ground_truth_id": "m_053",
+      "rank": null,
+      "top1_id": "m_023",
+      "top1_text": "Hantes' best friend is Maksym, they have known each other since school in Chernivtsi",
+      "latency_ms": 8.14
+    },
+    {
+      "id": "q_28",
+      "category": "multi_hop",
+      "query": "Where did Hantes' best friend host his birthday",
+      "ground_truth_id": "m_055",
+      "rank": null,
+      "top1_id": "m_023",
+      "top1_text": "Hantes' best friend is Maksym, they have known each other since school in Chernivtsi",
+      "latency_ms": 7.48
+    },
+    {
+      "id": "q_29",
+      "category": "multi_hop",
+      "query": "What memory library does Hantes' main project use",
+      "ground_truth_id": "m_057",
+      "rank": 1,
+      "top1_id": "m_057",
+      "top1_text": "Pulses uses the NLM library that Hantes wrote himself for long-term memory",
+      "latency_ms": 7.64
+    },
+    {
+      "id": "q_30",
+      "category": "multi_hop",
+      "query": "What street is Hantes' favorite coffee place on",
+      "ground_truth_id": "m_059",
+      "rank": null,
+      "top1_id": "m_060",
+      "top1_text": "Hantes' favorite coffee place is Plamya",
+      "latency_ms": 8.39
+    }
+  ]
+}

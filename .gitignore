@@ -25,6 +25,9 @@ htmlcov/
 nlm_data/
 *.db
 
+# Benchmark transient artifacts (results JSONs are intentionally tracked)
+benchmarks/.bench_chroma/
+
 # IDE
 .vscode/
 .idea/

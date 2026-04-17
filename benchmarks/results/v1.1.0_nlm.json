@@ -1,0 +1,370 @@
+{
+  "dataset_version": 1,
+  "dataset_path": "benchmarks/dataset.json",
+  "mode": "nlm",
+  "weights": {
+    "semantic": 0.4,
+    "time": 0.2,
+    "frequency": 0.2,
+    "importance": 0.2
+  },
+  "half_life_days": 90.0,
+  "top_k": 5,
+  "n_candidates": 50,
+  "ran_at": "2026-04-17T09:52:30.320602+00:00",
+  "metrics": {
+    "per_category": {
+      "frequency_boost": {
+        "n": 5,
+        "top1_accuracy": 0.8,
+        "recall_at_5": 1.0,
+        "mrr": 0.9,
+        "avg_latency_ms": 8.3
+      },
+      "importance_discrimination": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.4,
+        "mrr": 0.1333,
+        "avg_latency_ms": 7.64
+      },
+      "multi_hop": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.0,
+        "mrr": 0.0,
+        "avg_latency_ms": 7.89
+      },
+      "proper_noun_precision": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.6,
+        "mrr": 0.14,
+        "avg_latency_ms": 7.52
+      },
+      "temporal_conflict": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.6,
+        "mrr": 0.2067,
+        "avg_latency_ms": 8.01
+      },
+      "temporal_recall": {
+        "n": 5,
+        "top1_accuracy": 0.0,
+        "recall_at_5": 0.4,
+        "mrr": 0.1333,
+        "avg_latency_ms": 9.17
+      }
+    },
+    "overall": {
+      "n": 30,
+      "top1_accuracy": 0.1333,
+      "recall_at_5": 0.5,
+      "mrr": 0.2522,
+      "avg_latency_ms": 8.09
+    }
+  },
+  "per_query": [
+    {
+      "id": "q_01",
+      "category": "temporal_recall",
+      "query": "What kind of training does Hantes do these days",
+      "ground_truth_id": "m_002",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 11.02
+    },
+    {
+      "id": "q_02",
+      "category": "temporal_recall",
+      "query": "What game engine does Hantes use for Pulses",
+      "ground_truth_id": "m_004",
+      "rank": 3,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 8.44
+    },
+    {
+      "id": "q_03",
+      "category": "temporal_recall",
+      "query": "How is Hantes' music production progressing",
+      "ground_truth_id": "m_006",
+      "rank": 3,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 10.06
+    },
+    {
+      "id": "q_04",
+      "category": "temporal_recall",
+      "query": "What is Mishka's diet status",
+      "ground_truth_id": "m_008",
+      "rank": null,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 8.94
+    },
+    {
+      "id": "q_05",
+      "category": "temporal_recall",
+      "query": "How does Hantes drink coffee these days",
+      "ground_truth_id": "m_010",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.41
+    },
+    {
+      "id": "q_06",
+      "category": "temporal_conflict",
+      "query": "Where does Hantes live",
+      "ground_truth_id": "m_012",
+      "rank": 5,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.36
+    },
+    {
+      "id": "q_07",
+      "category": "temporal_conflict",
+      "query": "What does Hantes do for work",
+      "ground_truth_id": "m_014",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.47
+    },
+    {
+      "id": "q_08",
+      "category": "temporal_conflict",
+      "query": "What language model does Pulses use",
+      "ground_truth_id": "m_016",
+      "rank": 3,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 8.7
+    },
+    {
+      "id": "q_09",
+      "category": "temporal_conflict",
+      "query": "What phone does Hantes use",
+      "ground_truth_id": "m_018",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 8.08
+    },
+    {
+      "id": "q_10",
+      "category": "temporal_conflict",
+      "query": "What computer does Hantes work on",
+      "ground_truth_id": "m_020",
+      "rank": 2,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 8.43
+    },
+    {
+      "id": "q_11",
+      "category": "frequency_boost",
+      "query": "What is the cat's name",
+      "ground_truth_id": "m_021",
+      "rank": 1,
+      "top1_id": "m_021",
+      "top1_text": "The cat goes by Mishka, named after the Ukrainian word for little bear",
+      "latency_ms": 8.41
+    },
+    {
+      "id": "q_12",
+      "category": "frequency_boost",
+      "query": "Who is Hantes' best friend",
+      "ground_truth_id": "m_023",
+      "rank": 1,
+      "top1_id": "m_023",
+      "top1_text": "Hantes' best friend is Maksym, they have known each other since school in Chernivtsi",
+      "latency_ms": 8.5
+    },
+    {
+      "id": "q_13",
+      "category": "frequency_boost",
+      "query": "Who is the first Pulse persona",
+      "ground_truth_id": "m_025",
+      "rank": 1,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 8.47
+    },
+    {
+      "id": "q_14",
+      "category": "frequency_boost",
+      "query": "Where does Hantes like to get coffee",
+      "ground_truth_id": "m_027",
+      "rank": 2,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 8.57
+    },
+    {
+      "id": "q_15",
+      "category": "frequency_boost",
+      "query": "When is Pulses launching publicly",
+      "ground_truth_id": "m_029",
+      "rank": 1,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.57
+    },
+    {
+      "id": "q_16",
+      "category": "importance_discrimination",
+      "query": "Tell me about how Pulses started",
+      "ground_truth_id": "m_031",
+      "rank": 3,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 7.75
+    },
+    {
+      "id": "q_17",
+      "category": "importance_discrimination",
+      "query": "What are the details of Hantes' new contract",
+      "ground_truth_id": "m_033",
+      "rank": 3,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.24
+    },
+    {
+      "id": "q_18",
+      "category": "importance_discrimination",
+      "query": "Where did Hantes go for the conference last year",
+      "ground_truth_id": "m_035",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.24
+    },
+    {
+      "id": "q_19",
+      "category": "importance_discrimination",
+      "query": "When and where did Hantes get Mishka",
+      "ground_truth_id": "m_037",
+      "rank": null,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 7.83
+    },
+    {
+      "id": "q_20",
+      "category": "importance_discrimination",
+      "query": "What did Hantes spend money on for ML work",
+      "ground_truth_id": "m_039",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 8.13
+    },
+    {
+      "id": "q_21",
+      "category": "proper_noun_precision",
+      "query": "What book did Maksym recommend",
+      "ground_truth_id": "m_041",
+      "rank": 5,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 7.2
+    },
+    {
+      "id": "q_22",
+      "category": "proper_noun_precision",
+      "query": "What did Hantes eat at the Bukovina Folk Festival",
+      "ground_truth_id": "m_043",
+      "rank": 4,
+      "top1_id": "m_027",
+      "top1_text": "Hantes' favorite cafe in Chernivtsi is called Plamya, on Olha Kobylyanska street",
+      "latency_ms": 7.5
+    },
+    {
+      "id": "q_23",
+      "category": "proper_noun_precision",
+      "query": "What does Olena do for work",
+      "ground_truth_id": "m_045",
+      "rank": null,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 7.25
+    },
+    {
+      "id": "q_24",
+      "category": "proper_noun_precision",
+      "query": "Which gym does Hantes use",
+      "ground_truth_id": "m_047",
+      "rank": 4,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.39
+    },
+    {
+      "id": "q_25",
+      "category": "proper_noun_precision",
+      "query": "What is WaveScribe",
+      "ground_truth_id": "m_049",
+      "rank": null,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 8.24
+    },
+    {
+      "id": "q_26",
+      "category": "multi_hop",
+      "query": "Where does Hantes take their pet for medical care",
+      "ground_truth_id": "m_051",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.78
+    },
+    {
+      "id": "q_27",
+      "category": "multi_hop",
+      "query": "Where did Hantes' close friend study",
+      "ground_truth_id": "m_053",
+      "rank": null,
+      "top1_id": "m_023",
+      "top1_text": "Hantes' best friend is Maksym, they have known each other since school in Chernivtsi",
+      "latency_ms": 8.3
+    },
+    {
+      "id": "q_28",
+      "category": "multi_hop",
+      "query": "Where did Hantes' best friend host his birthday",
+      "ground_truth_id": "m_055",
+      "rank": null,
+      "top1_id": "m_025",
+      "top1_text": "Aethra is the first Pulse persona Hantes created in late 2025",
+      "latency_ms": 7.87
+    },
+    {
+      "id": "q_29",
+      "category": "multi_hop",
+      "query": "What memory library does Hantes' main project use",
+      "ground_truth_id": "m_057",
+      "rank": null,
+      "top1_id": "m_029",
+      "top1_text": "Hantes is preparing to launch Pulses publicly in summer 2026",
+      "latency_ms": 7.87
+    },
+    {
+      "id": "q_30",
+      "category": "multi_hop",
+      "query": "What street is Hantes' favorite coffee place on",
+      "ground_truth_id": "m_059",
+      "rank": null,
+      "top1_id": "m_027",
+      "top1_text": "Hantes' favorite cafe in Chernivtsi is called Plamya, on Olha Kobylyanska street",
+      "latency_ms": 7.64
+    }
+  ]
+}
