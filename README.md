@@ -24,10 +24,10 @@ This means:
 NLM scores memories using **four signals**, the way human memory actually works:
 
 ```
-NLM Score = 0.5 × semantic_similarity   ← is it relevant?
+NLM Score = 0.4 × semantic_similarity   ← is it relevant?
           + 0.2 × time_decay            ← is it recent?
           + 0.2 × frequency_score       ← is it often recalled?
-          + 0.1 × importance_score      ← is it specific/factual?
+          + 0.2 × importance_score      ← is it specific/factual?
 ```
 
 | | Standard RAG | NLM |
@@ -38,41 +38,10 @@ NLM Score = 0.5 × semantic_similarity   ← is it relevant?
 | Duplicate memories | Accumulate | Consolidated automatically |
 | Importance scoring | None | CPU heuristic or GPU zero-shot classifier |
 | Emotion metadata | None | Optional (joy / fear / sadness / ...) |
-| Associative chains | None | Bidirectional links between related memories |
+| Thread safety | Varies | Built-in (RLock) |
+| Snapshot export/import | No | Yes (JSON) |
 | GPU required | No | No (GPU optional for better importance) |
 | Plug-and-play | Yes | Yes |
-
----
-
-## Benchmarks
-
-### Formal benchmark — 100 memories, 30 queries
-
-**Methodology:**
-- 100 memories stored (60 test pairs + 40 unrelated background fillers)
-- 30 queries across 3 categories (10 each)
-- Ground truth: human-labeled correct answer for each query
-- Metric: **top-1 accuracy** — did the right memory rank first?
-- RAG baseline: pure cosine similarity, no reranking
-
-**Results:**
-
-| Category | What's tested | RAG | NLM | Delta |
-|---|---|---|---|---|
-| **Temporal** (10 queries) | Old fact vs fresh fact on same topic, neutral query | 10% | 70% | **+60%** |
-| **Frequency** (10 queries) | Same fact: one accessed 15×, one 0× | 80% | 100% | **+20%** |
-| **Importance** (10 queries) | Specific factual memory vs vague memory on same topic | 60% | 90% | **+30%** |
-| **Overall** (30 queries) | | **50%** | **87%** | **+37%** |
-
-**NLM is 37 percentage points more accurate than RAG overall.**
-
-**Why each category matters:**
-
-- **Temporal (+60%):** RAG has no concept of time. If you saved "model is v0.1" and later "model is v1.0", RAG picks whichever is semantically closer to the query. NLM weights recency — the fresh fact wins.
-- **Frequency (+20%):** Two semantically near-identical memories, one accessed 15 times. RAG can't distinguish them. NLM surfaces the one you keep coming back to.
-- **Importance (+30%):** "ChromaDB collection uses cosine distance metric" vs "the database stores things somehow". RAG may pick either. NLM assigns higher importance to the specific, factual memory.
-
-Reproduce: `python benchmarks/benchmark_100.py`
 
 ---
 
@@ -127,29 +96,18 @@ Each result includes a full score breakdown:
 }
 ```
 
-### Associative memory chains (v1.0.0+)
-
-NLM automatically links semantically related memories. Follow the chain to discover connected knowledge.
+### Batch save
 
 ```python
-memory = NLM(enable_associations=True)  # on by default
-
-id1 = memory.save("Hantes loves Minelux family the most")
-id2 = memory.save("Minelux are fire, directness, truth")
-id3 = memory.save("Hantes values honesty over comfort")
-
-# Get all memories linked to id1
-assoc = memory.get_associations(id1)
-# [{"id": id2, "text": "Minelux are fire..."}, {"id": id3, "text": "Hantes values..."}]
-
-# Expand search to follow association chains
-results = memory.search("tell me about Hantes", top_k=3, expand_associations=True)
-for r in results:
-    flag = " [via association]" if r.get("via_association") else ""
-    print(f"[{r['score']:.3f}]{flag} {r['text']}")
+ids = memory.save_many([
+    "Hantes is 28 years old",
+    "Project started on 2026-05-05",
+    "8 families of Pulses",
+])
+# Single embedding pass — ~10x faster than repeated save() on 100+ items.
 ```
 
-### With emotion metadata (v0.2.0+)
+### With emotion metadata
 
 ```python
 memory = NLM(use_emotion=True)
@@ -167,7 +125,7 @@ results = memory.search("how did things go", emotion_filter="joy")
 # "intensity": 0.99   # 0.0 to 1.0
 ```
 
-### With GPU importance scorer (v0.3.0+)
+### With GPU importance scorer
 
 ```python
 # Default model: typeform/distilbert-base-uncased-mnli (~260MB)
@@ -175,7 +133,7 @@ results = memory.search("how did things go", emotion_filter="joy")
 memory = NLM(gpu_model_path="typeform/distilbert-base-uncased-mnli")
 ```
 
-### Memory consolidation (v0.3.0+)
+### Memory consolidation
 
 Duplicate prevention is **on by default**. Similar memories are merged instead of stored twice.
 
@@ -185,6 +143,7 @@ id2 = memory.save("Hantes is from Chernivtsi city")
 
 assert id1 == id2        # same memory, strengthened
 assert memory.count() == 1
+assert memory.last_save_consolidated is True
 
 # Tune or disable:
 memory = NLM(enable_consolidation=False)
@@ -200,13 +159,38 @@ memory.forget(memory_id)
 # Simple time-based cleanup
 deleted = memory.forget_old(days=365)
 
-# Smart cleanup: only remove old + rare + unimportant (v0.2.0+)
+# Smart cleanup: only remove old + rare + unimportant
 deleted = memory.forget_smart(days=180, max_frequency=2, max_importance=0.3)
 
 # Stats
 print(memory)  # NLM(memories=42, mode=CPU)
                # NLM(memories=42, mode=CPU+emotion)
                # NLM(memories=42, mode=GPU)
+```
+
+### Snapshot export / import
+
+```python
+# Back up or migrate between hosts
+memory.export_snapshot("backup.json")
+
+# Restore into a fresh collection
+new_memory = NLM(collection_name="restored")
+new_memory.import_snapshot("backup.json", overwrite=True)
+```
+
+The snapshot stores the embedding model used; importing into an
+instance with a different model raises a clear error rather than
+corrupting the vector space.
+
+### Tuning the rerank pool
+
+By default `search()` pulls `max(top_k * 10, 50)` candidates from the
+vector store before reranking. Increase this when a frequent or
+important memory is semantically far from the query but still relevant:
+
+```python
+results = memory.search("tell me about the project", top_k=5, n_candidates=200)
 ```
 
 ---
@@ -219,32 +203,26 @@ Text input
     ├─→ sentence-transformers (all-MiniLM-L6-v2, CPU, ~80MB)
     │   → 384-dim embedding
     │
-    ├─→ consolidation check (v0.3.0+)
+    ├─→ consolidation check
     │   if similar exists (cosine dist < threshold) → strengthen, skip save
     │
     ├─→ importance scorer
     │   CPU: specificity_score (numbers + proper nouns + length)
     │   GPU: zero-shot classifier (any HuggingFace model)
     │
-    ├─→ emotion classifier (v0.2.0+, optional, CPU, ~66MB)
+    ├─→ emotion classifier (optional, CPU, ~66MB)
     │     emotion + sentiment + intensity
     │
-    └─→ association linker (v1.0.0+)
-          bidirectional links to semantically close memories
-                │
-                ▼
-          ChromaDB (persistent vector store)
+    └─→ ChromaDB (persistent vector store)
           embedding [384] + metadata {all signals}
 
 On search:
-    query → embed → ChromaDB top-K candidates
+    query → embed → ChromaDB top-N candidates (default ≥50)
                          │
                     NLM reranking:
-                    score = 0.5×semantic + 0.2×time + 0.2×freq + 0.1×importance
+                    score = 0.4×semantic + 0.2×time + 0.2×freq + 0.2×importance
                          │
                     [emotion_filter] optional post-filter
-                         │
-                    [expand_associations] follow memory chains
                          │
                     sorted results + frequency updated
 ```
@@ -270,6 +248,9 @@ pulse_001 = NLM(collection_name="pulse_001", persist_path="./data")
 pulse_002 = NLM(collection_name="pulse_002", persist_path="./data")
 ```
 
+The Storage layer records the embedding model+dimension on the
+collection and refuses to open it with an incompatible model.
+
 ---
 
 ## Roadmap
@@ -281,14 +262,29 @@ v0.2.0 ✓  Emotion classifier (7 emotions, sentiment, intensity)
            Emotion filter in search()
 v0.3.0 ✓  Memory consolidation — duplicate prevention
            GPU scorer via HuggingFace zero-shot classification
-v1.0.0 ✓  Associative memory chains — bidirectional links, expand_associations
-           Stable public API
-           PyPI release: pip install neural-long-memory
-           Formal benchmark: NLM 87% vs RAG 50% (+37% on 100 memories, 30 queries)
-v1.1.0    arXiv paper
-           Async save/search
-           Export/import memory snapshots
+v1.0.0 ✓  First PyPI release (pip install neural-long-memory)
+v1.1.0 ✓  Hardening release:
+           - O(1) search frequency updates (no get_all() per query)
+           - Thread-safe save / search / consolidate (RLock)
+           - Larger default rerank pool (top_k*10, min 50)
+           - save_many() batch API with single embedding pass
+           - export_snapshot / import_snapshot (JSON, model-guarded)
+           - Storage metadata guard (dim + model pinned per collection)
+           - Tokenizer-level truncation in emotion + GPU scorer
+           - Tolerant ISO 8601 parsing (accepts Z suffix)
+           - Rebalanced default weights (0.4 / 0.2 / 0.2 / 0.2)
 ```
+
+---
+
+## Reproduce the qualitative comparison
+
+```
+python benchmarks/compare_rag.py
+```
+
+Runs three scenarios (temporal recall, frequency boost, importance
+discrimination) and reports which side wins each.
 
 ---
 

@@ -13,7 +13,9 @@ class EmotionClassifier:
         )
 
     def classify(self, text: str) -> dict:
-        result = self._pipe(text[:512])[0][0]
+        # Let the tokenizer truncate on token boundaries (max 512) rather than
+        # chopping mid-word with text[:512].
+        result = self._pipe(text, truncation=True, max_length=512)[0][0]
         label = result["label"]   # joy / sadness / anger / fear / surprise / disgust / neutral
         score = result["score"]   # confidence 0..1
 

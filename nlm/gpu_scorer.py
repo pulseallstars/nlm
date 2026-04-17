@@ -25,9 +25,11 @@ class GPUScorer:
 
     def score(self, text: str) -> float:
         """Return importance score [0..1]. Higher = more worth remembering."""
+        # Tokenizer-level truncation — preserves word boundaries.
         result = self._pipe(
-            text[:512],
+            text,
             candidate_labels=[self.IMPORTANT_LABEL, self.TRIVIAL_LABEL],
+            truncation=True,
         )
         idx = result["labels"].index(self.IMPORTANT_LABEL)
         return round(result["scores"][idx], 4)
